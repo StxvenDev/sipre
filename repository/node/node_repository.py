@@ -14,7 +14,5 @@ def create_node(db: Session, id: int, lat: float, lon: float):
     return node.__repr__()
 
 
-
-
 def get_nodes(db: Session):
     return db.query(Node).all()

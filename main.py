@@ -3,6 +3,8 @@ from db.database import test_connection, SessionLocal,Base, engine
 from repository.node.node_repository import create_node
 from repository.seed.seed_repository import seed_graph
 from dotenv import load_dotenv
+from models.node_model import Node
+from repository.node.node_repository import get_nodes
 # from sqlalchemy import inspect
 
 load_dotenv()
@@ -35,6 +37,7 @@ async def create_node_controller():
     finally:
         db.close()
 
+
 @app.post("/SEED")
 async def seed():
     try:
@@ -48,6 +51,9 @@ async def seed():
     finally:
         db.close()
 
+
+
+
 @app.get("/test_connection")
 async def test_connection_controller():
     try:
@@ -55,3 +61,18 @@ async def test_connection_controller():
         return {"message": "Connection successful"}
     except Exception as e:
         return {"message": f"Connection failed: {e}"}
+    
+
+@app.get("/nodes_db")
+async def get_nodes_db():
+    try:
+        db = SessionLocal()
+        nodes = await get_nodes(db)
+        return {
+                "message": "successfully fetched",
+                "nodes": nodes
+                }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener los nodos: {str(e)}")
+    finally:
+        db.close()
