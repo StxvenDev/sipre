@@ -2,20 +2,20 @@ from fastapi import FastAPI, HTTPException
 from db.database import test_connection, SessionLocal,Base, engine
 from repository.node.node_repository import create_node
 from repository.seed.seed_repository import seed_graph
-from dotenv import load_dotenv
 from models.node_model import Node
 from repository.node.node_repository import get_nodes
+from repository.edge.edge_repository import upload_data_layer
 # from sqlalchemy import inspect
 
-load_dotenv()
 
 # if not inspect(engine).has_table('nodes') or not inspect(engine).has_table('edges'):
 #     # Create the tables if they do not exist
-#     Base.metadata.create_all(bind=engine)
 # Base.metadata.create_all(bind=engine)
+
 
 app = FastAPI()
 
+Base.metadata.create_all(bind=engine)
 
 
 @app.get("/")
@@ -52,6 +52,21 @@ async def seed():
         db.close()
 
 
+@app.get("/upload_data_layer")
+async def upload_data():
+    try:
+        db = SessionLocal()
+        edges = await upload_data_layer(db)
+        return {
+                "message": "successfully fetched",
+                "edges": edges
+                }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener las aristas: {str(e)}")
+    finally:
+        db.close()
+
+
 
 
 @app.get("/test_connection")
@@ -76,3 +91,6 @@ async def get_nodes_db():
         raise HTTPException(status_code=500, detail=f"Error al obtener los nodos: {str(e)}")
     finally:
         db.close()
+
+
+
