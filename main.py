@@ -4,6 +4,8 @@ from repository.node.node_repository import create_node
 from repository.seed.seed_repository import seed_graph
 from dotenv import load_dotenv
 from models.node_model import Node
+from models.cais_model import Cai
+from repository.cai.cai_repository import create_cai, get_all_cais
 from repository.node.node_repository import get_nodes
 # from sqlalchemy import inspect
 
@@ -12,7 +14,7 @@ load_dotenv()
 # if not inspect(engine).has_table('nodes') or not inspect(engine).has_table('edges'):
 #     # Create the tables if they do not exist
 #     Base.metadata.create_all(bind=engine)
-# Base.metadata.create_all(bind=engine)
+#Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -74,5 +76,50 @@ async def get_nodes_db():
                 }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener los nodos: {str(e)}")
+    finally:
+        db.close()
+
+
+
+
+@app.post("/create_cai")
+async def create_cai_controller(id: int, localidad: str, nombre: str, lat: float, lon: float):
+    try:
+        db = SessionLocal()
+        cai = create_cai(db, id=id, localidad=localidad, nombre=nombre, lat=lat, lon=lon)
+        return {
+            "message": "CAI created successfully",
+            "cai": {
+                "id": cai.id,
+                "localidad": cai.localidad,
+                "nombre": cai.nombre,
+                "lat": cai.lat,
+                "lon": cai.lon,
+            }
+        }
+    except Exception as e:
+        return {"message": f"Error creating CAI: {e}"}
+    finally:
+        db.close()
+
+@app.get("/cais")
+async def get_cais_controller():
+    try:
+        db = SessionLocal()
+        cais = get_all_cais(db)
+        return {
+            "message": "CAIs fetched successfully",
+            "cais": [
+                {
+                    "id": cai.id,
+                    "localidad": cai.localidad,
+                    "nombre": cai.nombre,
+                    "lat": cai.lat,
+                    "lon": cai.lon,
+                } for cai in cais
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching CAIs: {str(e)}")
     finally:
         db.close()
