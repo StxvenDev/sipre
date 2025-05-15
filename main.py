@@ -5,6 +5,7 @@ from repository.seed.seed_repository import seed_graph
 from models.node_model import Node
 from repository.node.node_repository import get_nodes
 from repository.edge.edge_repository import upload_data_layer
+from services.edge_services import draw_graph_from_db
 # from sqlalchemy import inspect
 
 
@@ -92,5 +93,8 @@ async def get_nodes_db():
     finally:
         db.close()
 
+@app.get("/draw_graph")
+async def draw_graph_db():
+    draw_graph_from_db()
 
 
