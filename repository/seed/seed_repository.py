@@ -3,6 +3,7 @@ from models.node_model import Node
 from models.edge_model import Edge
 import osmnx as ox
 import random
+import math
 
 def seed_graph(db: Session):
     G = ox.graph_from_place('Cartagena, Colombia', network_type='drive')
@@ -18,34 +19,36 @@ def seed_graph(db: Session):
     db.commit()
     edges.reset_index(inplace=True)
 
-    # Calcular el promedio de longitud de todas las aristas válidas
-    valid_lengths = edges[edges['u'] != edges['v']]['length']
-    total_node = db.query(Node).count()
-    avg_length = valid_lengths.sum() / total_node if total_node else 1
+    def calculate_straight_line_distance(lat1, lon1, lat2, lon2):
+    # Fórmula de Haversine para distancia en línea recta
+        R = 6371  # Radio de la Tierra en km
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+
+        a = math.sin(delta_phi / 2)*2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2)*2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c * 1000  # distancia en metros
 
     for index, row in edges.iterrows():
         if row['u'] != row['v']:
             num_cais = random.randint(1, 3)
             estrato = random.randint(1, 6)
             cams = random.randint(1, 5)
-            length = row['length']
+            length = row['length'] if row['length'] > 0 else 1
             traffic = random.randint(1, 10)
 
-            # Normalización de variables
-            norm_length = length / avg_length if avg_length else 1
-            norm_estrato = (estrato - 1) / 5  # estrato de 1 a 6 → 0 a 1
-            norm_cams = (cams - 1) / 4        # cams de 1 a 5 → 0 a 1
-            norm_traffic = (traffic - 1) / 9  # traffic de 1 a 10 → 0 a 1
-            norm_cais = (num_cais - 1) / 2    # num_cais de 1 a 3 → 0 a 1
+            # Obtener lat/lon desde la base de datos
+            node_u = db.query(Node).filter(Node.id == row['u']).first()
+            node_v = db.query(Node).filter(Node.id == row['v']).first()
 
-            # Nueva fórmula ponderada
-            weight = (
-                (norm_length) +
-                0.8 * norm_cais +
-                0.5 * norm_cams +
-                0.35 * norm_traffic -
-                0.4 * norm_estrato
-            )
+            if not node_u or not node_v:
+                continue  # saltar si no están los nodos
+
+            straight_line = calculate_straight_line_distance(node_u.lat, node_u.lon, node_v.lat, node_v.lon)
+
+            # Peso total sin normalización ni ponderaciones
+            weight = length + straight_line + num_cais + estrato + cams + traffic
 
             edge = Edge(
                 node_u=row['u'],
@@ -58,4 +61,7 @@ def seed_graph(db: Session):
                 weight=weight
             )
             db.add(edge)
-    db.commit()
+
+
+
+

@@ -1,46 +1,49 @@
+import igraph as ig
+import matplotlib.pyplot as plt
 from sqlalchemy.orm import Session
 from models.node_model import Node
 from models.edge_model import Edge
 from db.database import SessionLocal
-import networkx as nx
-import matplotlib.pyplot as plt
 
 def draw_graph_from_db():
     db = SessionLocal()
-    nodes = db.query(Node).all()
-    edges = db.query(Edge).all()
+    nodes = db.query(Node.id).all()
+    edges = db.query(Edge.node_u, Edge.node_v, Edge.weight).all()
     db.close()
 
-    G = nx.Graph()  # Usa nx.Graph() si tu grafo es no dirigido
+    if not nodes or not edges:
+        print("No hay nodos o aristas en la base de datos.")
+        return
 
-    # Agrega nodos
-    for node in nodes:
-        G.add_node(node.id)
+    node_ids = [n[0] for n in nodes]
+    id_to_index = {node_id: idx for idx, node_id in enumerate(node_ids)}
+    ig_edges = [(id_to_index[e[0]], id_to_index[e[1]]) for e in edges]
+    weights = [e[2] for e in edges]
 
-    # Agrega aristas
-    for edge in edges:
-        G.add_edge(edge.node_u, edge.node_v, weight=edge.weight)
+    g = ig.Graph()
+    g.add_vertices(len(node_ids))
+    g.add_edges(ig_edges)
+    g.es['weight'] = weights
 
-    # Dibuja en consola (lista de adyacencia)
     print("GRAFO (formato: nodo -> [vecinos])")
-    for node in G.nodes():
-        print(f"{node} -> {list(G.neighbors(node))}")
+    for idx, node_id in enumerate(node_ids[:50]):
+        neighbors = [node_ids[n] for n in g.neighbors(idx)]
+        print(f"{node_id} -> {neighbors}")
 
-    # Ejemplo: define tus nodos de inicio y fin
-    start_id = 11642908296
-    end_id = 7546194063
+    start_idx = 0
+    end_idx = len(node_ids) - 1
 
-    # Calcula el camino más corto usando el peso
-    path = nx.astar_path(G, start_id, end_id, weight='weight')
-
-    # Dibuja todos los nodos y aristas
-    pos = nx.spring_layout(G)
-    nx.draw(G, pos, with_labels=False, node_color='lightblue', edge_color='gray')
-
-    # Extrae las aristas del camino óptimo
-    path_edges = list(zip(path, path[1:]))
-
-    # Dibuja el camino óptimo en rojo
-    nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='red', width=2)
-
-    plt.show()
+    if g.vcount() < 1000000000000000:
+        path = g.get_shortest_paths(start_idx, to=end_idx, weights='weight', output='vpath')[0]
+        print("Camino más corto:", [node_ids[i] for i in path])
+        layout = g.layout("auto")
+        ig.plot(
+            g,
+            layout=layout,
+            vertex_label=None,
+            edge_color=["red" if (e.source in path and e.target in path) else "gray" for e in g.es],
+            bbox=(600, 600),
+        )
+        plt.show()
+    else:
+        print("El grafo es demasiado grande para calcular el camino o dibujarlo.")
