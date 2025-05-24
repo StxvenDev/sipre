@@ -25,10 +25,19 @@ def seed_graph(db: Session):
         phi1, phi2 = math.radians(lat1), math.radians(lat2)
         delta_phi = math.radians(lat2 - lat1)
         delta_lambda = math.radians(lon2 - lon1)
+        try:
+            a = math.sin(delta_phi / 2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2)**2
+            # a = max(0.0, min(1.0, a))
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)) 
+            print(f"Distancia entre ({lat1}, {lon1}) y ({lat2}, {lon2}): {R * c * 1000} m")
+            return R * c * 1000 
+        except ValueError as e:
+            print(a);
+            print(f"Error calculando distancia entre ({lat1}, {lon1}) y ({lat2}, {lon2}): {e}")
+            raise
 
-        a = math.sin(delta_phi / 2)*2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2)*2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        return R * c * 1000  # distancia en metros
+
+        
 
     for index, row in edges.iterrows():
         if row['u'] != row['v']:
@@ -61,6 +70,7 @@ def seed_graph(db: Session):
                 weight=weight
             )
             db.add(edge)
+    db.commit()
 
 
 

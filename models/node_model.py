@@ -9,6 +9,7 @@ class Node(Base):
     # name = Column(String(50), nullable=False)
     lat = Column(Float, nullable=True)
     lon = Column(Float, nullable=True)
+    
 
     def __repr__(self):
         return f"Node(id={self.id}, latitude={self.lat}, longitude={self.lon})"
