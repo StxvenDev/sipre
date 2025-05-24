@@ -5,7 +5,8 @@ from repository.seed.seed_repository import seed_graph
 from models.node_model import Node
 from repository.node.node_repository import get_nodes
 from repository.edge.edge_repository import upload_data_layer
-from services.edge_services import draw_graph_from_db
+from services.edge_services import draw_graph
+from fastapi.responses import FileResponse
 # from sqlalchemy import inspect
 
 
@@ -95,6 +96,7 @@ async def get_nodes_db():
 
 @app.get("/draw_graph")
 async def draw_graph_db():
-    draw_graph_from_db()
+    draw_graph()
+    return FileResponse("grafo.png", media_type="image/png")
 
 

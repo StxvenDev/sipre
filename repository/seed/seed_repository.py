@@ -18,11 +18,6 @@ def seed_graph(db: Session):
     db.commit()
     edges.reset_index(inplace=True)
 
-    # Calcular el promedio de longitud de todas las aristas válidas
-    valid_lengths = edges[edges['u'] != edges['v']]['length']
-    total_node = db.query(Node).count()
-    avg_length = valid_lengths.sum() / total_node if total_node else 1
-
     for index, row in edges.iterrows():
         if row['u'] != row['v']:
             num_cais = random.randint(1, 3)
@@ -30,22 +25,7 @@ def seed_graph(db: Session):
             cams = random.randint(1, 5)
             length = row['length']
             traffic = random.randint(1, 10)
-
-            # Normalización de variables
-            norm_length = length / avg_length if avg_length else 1
-            norm_estrato = (estrato - 1) / 5  # estrato de 1 a 6 → 0 a 1
-            norm_cams = (cams - 1) / 4        # cams de 1 a 5 → 0 a 1
-            norm_traffic = (traffic - 1) / 9  # traffic de 1 a 10 → 0 a 1
-            norm_cais = (num_cais - 1) / 2    # num_cais de 1 a 3 → 0 a 1
-
-            # Nueva fórmula ponderada
-            weight = (
-                (norm_length) +
-                0.8 * norm_cais +
-                0.5 * norm_cams +
-                0.35 * norm_traffic -
-                0.4 * norm_estrato
-            )
+            weight = length  + num_cais + estrato + cams + traffic
 
             edge = Edge(
                 node_u=row['u'],
