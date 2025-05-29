@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 USER_NAME = os.getenv("DB_USER")
-PASSWORD = os.getenv("DB_PASSWORD")
+PASSWORD = os.getenv("DB_PASS")
 HOST = os.getenv("DB_HOST")
 DATABASE = os.getenv("DB_NAME")
 DB_PORT = os.getenv("DB_PORT")
@@ -20,10 +20,11 @@ connection_string = quote_plus(
     f"UID={USER_NAME};"
     f"PWD={PASSWORD};"
     f"Encrypt=yes;"
-    f"TrustServerCertificate=no;"
+    f"TrustServerCertificate=yes;"
     f"Connection Timeout=30;"
 )
 DATABASE_URL = f"mssql+pyodbc:///?odbc_connect={connection_string}"
+# print("Conexión a la base de datos:", DATABASE_URL)
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

@@ -21,11 +21,15 @@ def seed_graph(db: Session):
     for index, row in edges.iterrows():
         if row['u'] != row['v']:
             num_cais = random.randint(1, 3)
-            estrato = random.randint(1, 6)
+            # Solo las primeras 200 aristas serán estrato 1
+            if index < 2000:
+                estrato = 1
+            else:
+                estrato = random.randint(2, 6)
             cams = random.randint(1, 5)
             length = row['length']
             traffic = random.randint(1, 10)
-            weight = length  + num_cais + estrato + cams + traffic
+            weight = length + num_cais + estrato + cams + traffic
 
             edge = Edge(
                 node_u=row['u'],

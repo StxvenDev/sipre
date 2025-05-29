@@ -34,18 +34,19 @@ def draw_graph():
     # Buscar nodos conectados a aristas con estrato 1 o 2
     estrato_nodes = set()
     for u, v, _, estrato in edges:
-        if estrato in (1, 2):
+        if estrato == 1:
             estrato_nodes.add(u)
             estrato_nodes.add(v)
     estrato_nodes = list(estrato_nodes)
     if not estrato_nodes:
-        print("No hay nodos conectados a aristas con estrato 1 o 2.")
+        print("No hay nodos conectados a aristas con estrato 1 ")
         return
 
-    start_node = nodes[0][0]
+    # start_node = nodes[0][0]
+    start_node = 1091385678
     end_node = random.choice(estrato_nodes)
 
-    print(f"Buscando camino desde {start_node} hasta {end_node} (estrato 1 o 2)")
+    print(f"Buscando camino desde {start_node} hasta {end_node} (estrato 1 )")
 
     try:
         path = nx.astar_path(
