@@ -3,9 +3,10 @@ import matplotlib.pyplot as plt
 from sqlalchemy.orm import Session
 from models.node_model import Node
 from models.edge_model import Edge
-from db.database import SessionLocal
+import osmnx as ox
 import random
 import math
+from db.database import SessionLocal
 
 def euclidean_heuristic(u, v, node_coords):
     lat1, lon1 = node_coords[u]
@@ -43,7 +44,7 @@ def draw_graph():
         return
 
     # start_node = nodes[0][0]
-    start_node = 1091385678
+    start_node = 276308543
     end_node = random.choice(estrato_nodes)
 
     print(f"Buscando camino desde {start_node} hasta {end_node} (estrato 1 )")
@@ -102,3 +103,50 @@ def draw_graph():
     plt.savefig("grafo.png")
     plt.close()
     print("Imagen del grafo guardada como grafo.png")
+
+def seed_graph(db: Session):
+    """
+    Crea nodos y aristas en la base de datos a partir de un grafo de OSMnx.
+    """
+    G = ox.graph_from_place('Cartagena, Colombia', network_type='drive')
+    nodes_gdf, edges_gdf = ox.graph_to_gdfs(G)
+    _seed_nodes(db, nodes_gdf)
+    _seed_edges(db, edges_gdf)
+
+def _seed_nodes(db: Session, nodes_gdf):
+    """Inserta nodos en la base de datos desde el GeoDataFrame de nodos."""
+    nodes_gdf.reset_index(inplace=True)
+    for _, row in nodes_gdf.iterrows():
+        node = Node(
+            id=row['osmid'],
+            lat=row['y'],
+            lon=row['x']
+        )
+        db.add(node)
+    db.commit()
+
+def _seed_edges(db: Session, edges_gdf, estrato_1_limit=200):
+    """Inserta aristas en la base de datos desde el GeoDataFrame de aristas."""
+    edges_gdf.reset_index(inplace=True)
+    for index, row in edges_gdf.iterrows():
+        if row['u'] == row['v']:
+            continue
+        num_cais = random.randint(1, 3)
+        estrato = 1 if index < estrato_1_limit else random.randint(2, 6)
+        cams = random.randint(1, 5)
+        length = row['length']
+        traffic = random.randint(1, 10)
+        weight = length + num_cais + estrato + cams + traffic
+
+        edge = Edge(
+            node_u=row['u'],
+            node_v=row['v'],
+            length=length,
+            num_cais=num_cais,
+            estrato=estrato,
+            cams=cams,
+            traffic=traffic,
+            weight=weight
+        )
+        db.add(edge)
+    db.commit()

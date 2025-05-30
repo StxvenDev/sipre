@@ -1,101 +1,103 @@
 from fastapi import FastAPI, HTTPException
-from db.database import test_connection, SessionLocal,Base, engine
-from repository.node.node_repository import create_node
+from fastapi.responses import FileResponse
+from sqlalchemy import inspect
+
+from db.database import test_connection, SessionLocal, Base, engine
+from repository.node.node_repository import create_node, get_nodes
 from repository.seed.seed_repository import seed_graph
-from models.node_model import Node
-from repository.node.node_repository import get_nodes
 from repository.edge.edge_repository import upload_data_layer
 from services.edge_services import draw_graph
-from fastapi.responses import FileResponse
-# from sqlalchemy import inspect
 
 
-# if not inspect(engine).has_table('nodes') or not inspect(engine).has_table('edges'):
-#     # Create the tables if they do not exist
-# Base.metadata.create_all(bind=engine)
+def create_tables_if_not_exist():
+    """Crea las tablas requeridas si no existen en la base de datos."""
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    required_tables = set(Base.metadata.tables.keys())
+    missing_tables = required_tables - tables
+    if missing_tables:
+        print(f"Creando tablas faltantes: {missing_tables}")
+        Base.metadata.create_all(bind=engine)
+    else:
+        print("Todas las tablas requeridas ya existen.")
 
+
+create_tables_if_not_exist()
 
 app = FastAPI()
-
-Base.metadata.create_all(bind=engine)
 
 
 @app.get("/")
 async def root():
+    """Endpoint raíz para verificar que la API está activa."""
     return {"message": "Hello World"}
+
 
 @app.post("/create_node")
 async def create_node_controller():
+    """Crea un nodo de ejemplo en la base de datos."""
+    db = SessionLocal()
     try:
-        # Simulate creating a node
-        db = SessionLocal()
         node = create_node(db, id=1, lat=123456, lon=654321)
-        return {
-                "message": "Node created successfully",
-                "node": node
-                }
+        return {"message": "Node created successfully", "node": node}
     except Exception as e:
-        return {"message": f"Error creating node: {e}"}
+        raise HTTPException(status_code=500, detail=f"Error creating node: {e}")
     finally:
         db.close()
 
 
-@app.post("/SEED")
-async def seed():
+@app.post("/seed_graph")
+async def seed_graph_endpoint():
+    """Puebla la base de datos con nodos y aristas desde OSMnx."""
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         seed_graph(db)
-        return {
-                "message": "successfully seeded",
-                }
+        return {"message": "successfully seeded"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al insertar nodos: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al poblar la base de datos: {str(e)}")
     finally:
         db.close()
 
 
 @app.get("/upload_data_layer")
 async def upload_data():
+    """Obtiene las aristas de la base de datos."""
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         edges = await upload_data_layer(db)
-        return {
-                "message": "successfully fetched",
-                "edges": edges
-                }
+        return {"message": "successfully fetched", "edges": edges}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener las aristas: {str(e)}")
     finally:
         db.close()
 
 
-
-
 @app.get("/test_connection")
 async def test_connection_controller():
+    """Verifica la conexión con la base de datos."""
     try:
         test_connection()
         return {"message": "Connection successful"}
     except Exception as e:
-        return {"message": f"Connection failed: {e}"}
-    
+        raise HTTPException(status_code=500, detail=f"Connection failed: {e}")
+
 
 @app.get("/nodes_db")
 async def get_nodes_db():
+    """Obtiene los nodos de la base de datos."""
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         nodes = await get_nodes(db)
-        return {
-                "message": "successfully fetched",
-                "nodes": nodes
-                }
+        return {"message": "successfully fetched", "nodes": nodes}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener los nodos: {str(e)}")
     finally:
         db.close()
 
+
 @app.get("/draw_graph")
 async def draw_graph_db():
+    """Genera y devuelve una imagen del grafo actual."""
     draw_graph()
     return FileResponse("grafo.png", media_type="image/png")
 
